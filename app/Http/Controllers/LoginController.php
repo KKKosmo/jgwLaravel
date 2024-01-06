@@ -2,38 +2,45 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Response;
 
 class LoginController extends Controller
 {
     public function login(Request $request)
     {
-        try {
-            $credentials = $request->only(['name', 'password']);
-    
-            if (Auth::attempt($credentials)) {
-                $token = $request->user()->createToken('token-name')->plainTextToken;
-        
-                return response()->json(['message' => 'Login successful = ' . $token])
-                ->cookie('token', $token, 60 * 24 * 36500, '/', null, false, true);
-            
-            }
-    
-            return response()->json(['message' => 'Login error'], 401);
-        } catch (\Exception $e) {
-            \Log::error($e);
-            return response()->json(['response' => $e->getMessage()], 500);
+        if (!Auth::attempt($request->only('name', 'password'))) {
+            return response([
+                'message' => 'Invalid credentials!'
+            ], Response::HTTP_UNAUTHORIZED);
         }
+
+        $user = Auth::user();
+
+        $token = $user->createToken('token')->plainTextToken;
+
+        $cookie = cookie('jwt', $token, 60 * 24); // 1 day
+
+        return response([
+            'message' => $token
+        ])->withCookie($cookie);
     }
-    
 
-
-    public function logout(Request $request)
+    public function user()
     {
-        $request->user()->tokens()->delete();
-    
-        return response()->json(['message' => 'Logout successful']);
+        return Auth::user();
     }
-    
+
+    public function logout()
+    {
+        $cookie = Cookie::forget('jwt');
+
+        return response([
+            'message' => 'Success'
+        ])->withCookie($cookie);
+    }
 }

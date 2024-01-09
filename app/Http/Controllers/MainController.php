@@ -12,9 +12,21 @@ use App\Events\MainDeleted;
 
 class MainController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $mains = Main::all();
+        $query = Main::query();
+
+        // Handle sorting
+        $sortColumn = $request->query('sort');
+        $sortOrder = $request->query('order', 'asc');
+
+        if ($sortColumn) {
+            $query->orderBy($sortColumn, $sortOrder);
+        }
+
+        // Retrieve data
+        $mains = $query->get();
+
         return response()->json($mains);
     }
 
@@ -32,10 +44,7 @@ class MainController extends Controller
             broadcast(new MainCreated($main));
             return response()->json(['message' => 'Record created successfully', 'data' => $main], 201);
         } catch (\Exception $e) {
-            // Log the error
             \Log::error($e);
-
-            // Return an error response with a JSON payload
             return response()->json(['response' => $e], 500);
         }
     }

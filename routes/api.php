@@ -12,10 +12,10 @@ use App\Http\Controllers\LoginController;
 //     return view('spa'); 
 // })->where('any', '.*');
 
-// Route::middleware(['auth:sanctum'])->group(function () {
-// });
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('main/getNewSet', [MainController::class, 'getNewSet']);
+    Route::get('main/checkForm', [MainController::class, 'checkForm']);
     Route::resource('edits', EditsController::class);
     Route::resource('main', MainController::class);
     Route::resource('reports', ReportsController::class);

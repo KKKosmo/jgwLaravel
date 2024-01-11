@@ -68,4 +68,69 @@ class MainController extends Controller
         broadcast(new MainDeleted($id));
         return response()->json(['message' => 'Record deleted successfully']);
     }
+
+    
+
+    public function getNewSet(Request $request)
+    {
+        $request->validate([
+            'startDate' => 'required|date',
+            'endDate'   => 'required|date|after_or_equal:startDate',
+        ]);
+
+        $startDate = $request->input('startDate');
+        $endDate = $request->input('endDate');
+
+
+        $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
+        $lastDayOfMonth = \Carbon\Carbon::parse($endDate)->lastOfMonth();
+
+        try {
+            $mains = \DB::table('main')
+                ->select('id', 'checkIn', 'checkOut', 'room')
+                ->where('checkIn', '<=', $lastDayOfMonth)
+                ->where('checkOut', '>=', $firstDayOfMonth)
+                ->get();
+
+            return response()->json($mains);
+        } catch (\Exception $e) {
+            // Handle exceptions
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+
+    public function checkForm(Request $request)
+    {
+        $request->validate([
+            'startDate' => 'required|date',
+            'endDate'   => 'required|date|after_or_equal:startDate',
+            'room' => 'required'
+        ]);
+    
+        $startDate = $request->input('startDate');
+        $endDate = $request->input('endDate');
+        $userRooms = explode(',', $request->input('room'));
+    
+        try {
+            $databaseRooms = \DB::table('main')
+                ->select('room')
+                ->where('checkIn', '<=', $endDate)
+                ->where('checkOut', '>=', $startDate)
+                ->get()
+                ->pluck('room')
+                ->toArray();
+    
+            $commonRooms = array_intersect($userRooms, $databaseRooms);
+    
+            if (!empty($commonRooms)) {
+                return response()->json(['available' => 'false']);
+            }
+    
+            return response()->json(['available' => 'true']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    
 }

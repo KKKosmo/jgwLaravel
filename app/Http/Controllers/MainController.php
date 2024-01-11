@@ -15,20 +15,24 @@ class MainController extends Controller
     public function index(Request $request)
     {
         $query = Main::query();
-
+    
         // Handle sorting
         $sortColumn = $request->query('sort');
         $sortOrder = $request->query('order', 'asc');
-
+    
         if ($sortColumn) {
             $query->orderBy($sortColumn, $sortOrder);
         }
-
+    
+        // Add the raw expression for balance
+        $query->select('*', \DB::raw('(full_payment - partial_payment) as balance'));
+    
         // Retrieve data
         $mains = $query->get();
-
+    
         return response()->json($mains);
     }
+    
 
     public function show($id)
     {
@@ -54,7 +58,7 @@ class MainController extends Controller
         $main = Main::findOrFail($id);
         $main->update($request->all());
         broadcast(new MainUpdated($main));
-        return response()->json($main, 200);
+        return response()->json(['message' => 'Record updated successfully']);
     }
 
     public function destroy($id)
@@ -62,6 +66,6 @@ class MainController extends Controller
         $main = Main::findOrFail($id);
         $main->delete();
         broadcast(new MainDeleted($id));
-        return response()->json(null, 204);
+        return response()->json(['message' => 'Record deleted successfully']);
     }
 }

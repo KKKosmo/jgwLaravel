@@ -21,7 +21,7 @@ return new class extends Migration
             $table->boolean('paid');
             $table->date('checkIn');
             $table->date('checkOut');
-            $table->string('room', 10);
+            $table->string('room', 20);
             $table->string('user', 20);
             $table->timestamps();
         });

@@ -69,7 +69,10 @@ class MainController extends Controller
         return response()->json(['message' => 'Record deleted successfully']);
     }
 
-    
+
+
+
+
 
     public function getNewSet(Request $request)
     {
@@ -84,6 +87,9 @@ class MainController extends Controller
         $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
         $lastDayOfMonth = \Carbon\Carbon::parse($endDate)->lastOfMonth();
     
+        // Use startOfMonth() to get the first day of the month
+        $dateOffset = $firstDayOfMonth->startOfMonth()->dayOfWeek;
+    
         try {
             $mains = \DB::table('main')
                 ->select('id', 'checkIn', 'checkOut', 'room')
@@ -92,20 +98,23 @@ class MainController extends Controller
                 ->get();
     
             // Process data
-            $availability = [];
+            $availability = [
+                'dayNumber' => [],
+                'data'      => [],
+            ];
     
-            // Initialize array of sets
-            $setsSize = $lastDayOfMonth->diffInDays($firstDayOfMonth) + 1; // +1 because we want to include the last day
+            // Initialize array of sets with a fixed size of 42
+            $setsSize = 42;
             $sets = array_fill(0, $setsSize, ["J", "G", "A", "K1", "K2", "E"]);
     
             foreach ($mains as $main) {
-                \Log::info(json_encode($main));
                 $checkInDate = \Carbon\Carbon::parse($main->checkIn);
                 $checkOutDate = \Carbon\Carbon::parse($main->checkOut);
     
+                // Iterate over each day in the range of the main booking
                 for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
-                    $dayIndex = $currentDate->diffInDays($firstDayOfMonth);
-                    
+                    $dayIndex = ($currentDate->diffInDays($firstDayOfMonth) + $dateOffset) % $setsSize;
+    
                     // Remove room from the set
                     $roomIndex = array_search($main->room, $sets[$dayIndex]);
                     if ($roomIndex !== false) {
@@ -114,10 +123,11 @@ class MainController extends Controller
                 }
             }
     
-            // Create the availability array
+            // Create the availability arrays
             foreach ($sets as $index => $rooms) {
-                $date = $firstDayOfMonth->copy()->addDays($index)->toDateString();
-                $availability[] = [$date, implode(", ", $rooms)];
+                $date = $firstDayOfMonth->copy()->addDays(($index - $dateOffset + $setsSize) % $setsSize)->format('d');
+                $availability['dayNumber'][] = $date;
+                $availability['data'][] = implode(", ", $rooms);
             }
     
             return response()->json($availability);
@@ -127,6 +137,14 @@ class MainController extends Controller
         }
     }
     
+    
+
+
+
+
+
+
+
 
 
     public function checkForm(Request $request)

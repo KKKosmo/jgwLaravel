@@ -77,27 +77,56 @@ class MainController extends Controller
             'startDate' => 'required|date',
             'endDate'   => 'required|date|after_or_equal:startDate',
         ]);
-
+    
         $startDate = $request->input('startDate');
         $endDate = $request->input('endDate');
-
-
+    
         $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
         $lastDayOfMonth = \Carbon\Carbon::parse($endDate)->lastOfMonth();
-
+    
         try {
             $mains = \DB::table('main')
                 ->select('id', 'checkIn', 'checkOut', 'room')
                 ->where('checkIn', '<=', $lastDayOfMonth)
                 ->where('checkOut', '>=', $firstDayOfMonth)
                 ->get();
-
-            return response()->json($mains);
+    
+            // Process data
+            $availability = [];
+    
+            // Initialize array of sets
+            $setsSize = $lastDayOfMonth->diffInDays($firstDayOfMonth) + 1; // +1 because we want to include the last day
+            $sets = array_fill(0, $setsSize, ["J", "G", "A", "K1", "K2", "E"]);
+    
+            foreach ($mains as $main) {
+                \Log::info(json_encode($main));
+                $checkInDate = \Carbon\Carbon::parse($main->checkIn);
+                $checkOutDate = \Carbon\Carbon::parse($main->checkOut);
+    
+                for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
+                    $dayIndex = $currentDate->diffInDays($firstDayOfMonth);
+                    
+                    // Remove room from the set
+                    $roomIndex = array_search($main->room, $sets[$dayIndex]);
+                    if ($roomIndex !== false) {
+                        unset($sets[$dayIndex][$roomIndex]);
+                    }
+                }
+            }
+    
+            // Create the availability array
+            foreach ($sets as $index => $rooms) {
+                $date = $firstDayOfMonth->copy()->addDays($index)->toDateString();
+                $availability[] = [$date, implode(", ", $rooms)];
+            }
+    
+            return response()->json($availability);
         } catch (\Exception $e) {
             // Handle exceptions
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    
 
 
     public function checkForm(Request $request)

@@ -92,6 +92,8 @@ class MainController extends Controller
         $firstDayOfMonth->subDays($dateOffset);
         $lastDayOfMonth->addDays(42 - ($dateOffset + $lastDayOfMonth->day));
 
+        \Log::info($firstDayOfMonth);
+        \Log::info($lastDayOfMonth);
     
         try {
             $mains = \DB::table('main')
@@ -117,14 +119,24 @@ class MainController extends Controller
     
                 // Iterate over each day in the range of the main booking
                 for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
-                    $dayIndex = ($currentDate->diffInDays($firstDayOfMonth) + $dateOffset) - 1;
+                    $dayIndex = ($currentDate->diffInDays($firstDayOfMonth));
                         
                 \Log::info($dayIndex);
-                    // Remove room from the set
-                    $roomIndex = array_search($main->room, $sets[$dayIndex]);
-                    if ($roomIndex !== false) {
-                        unset($sets[$dayIndex][$roomIndex]);
+                
+                if($dayIndex < 42){
+
+                    $dataArray = explode(',', $main->room);
+                    foreach ($dataArray as $room) {
+                        
+                        $roomIndex = array_search($room, $sets[$dayIndex]);
+                        if ($roomIndex !== false) {
+                            unset($sets[$dayIndex][$roomIndex]);
+                        }
                     }
+
+
+
+                }
                 }
             }
     

@@ -87,8 +87,11 @@ class MainController extends Controller
         $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
         $lastDayOfMonth = \Carbon\Carbon::parse($endDate)->lastOfMonth();
     
-        // Use startOfMonth() to get the first day of the month
         $dateOffset = $firstDayOfMonth->startOfMonth()->dayOfWeek;
+
+        $firstDayOfMonth->subDays($dateOffset);
+        $lastDayOfMonth->addDays(42 - ($dateOffset + $lastDayOfMonth->day));
+
     
         try {
             $mains = \DB::table('main')
@@ -108,13 +111,15 @@ class MainController extends Controller
             $sets = array_fill(0, $setsSize, ["J", "G", "A", "K1", "K2", "E"]);
     
             foreach ($mains as $main) {
+                \Log::info('Main Object: ' . json_encode($main));
                 $checkInDate = \Carbon\Carbon::parse($main->checkIn);
                 $checkOutDate = \Carbon\Carbon::parse($main->checkOut);
     
                 // Iterate over each day in the range of the main booking
                 for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
-                    $dayIndex = ($currentDate->diffInDays($firstDayOfMonth) + $dateOffset) % $setsSize;
-    
+                    $dayIndex = ($currentDate->diffInDays($firstDayOfMonth) + $dateOffset) - 1;
+                        
+                \Log::info($dayIndex);
                     // Remove room from the set
                     $roomIndex = array_search($main->room, $sets[$dayIndex]);
                     if ($roomIndex !== false) {
@@ -125,7 +130,7 @@ class MainController extends Controller
     
             // Create the availability arrays
             foreach ($sets as $index => $rooms) {
-                $date = $firstDayOfMonth->copy()->addDays(($index - $dateOffset + $setsSize) % $setsSize)->format('d');
+                $date = $firstDayOfMonth->copy()->addDays(($index + $setsSize) % $setsSize)->format('d');
                 $availability['dayNumber'][] = $date;
                 $availability['data'][] = implode(", ", $rooms);
             }

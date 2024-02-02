@@ -78,12 +78,25 @@ class MainController extends Controller
     {
         $request->validate([
             'startDate' => 'required|date',
-            'endDate'   => 'required|date|after_or_equal:startDate',
+            'endDate'   => 'required|date',
         ]);
     
         $startDate = $request->input('startDate');
         $endDate = $request->input('endDate');
     
+
+        \Log::info($startDate);
+        \Log::info($endDate);
+        
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+            \Log::info("Swapping");
+        }
+
+        \Log::info($startDate);
+        \Log::info($endDate);
+
+
         $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
         $lastDayOfMonth = \Carbon\Carbon::parse($endDate)->lastOfMonth();
     
@@ -166,14 +179,21 @@ class MainController extends Controller
 
     public function checkForm(Request $request)
     {
-        $request->validate([
-            'startDate' => 'required|date',
-            'endDate'   => 'required|date|after_or_equal:startDate',
-            'room' => 'required'
-        ]);
+        try {
+            $request->validate([
+                'startDate' => 'required|date',
+                'endDate'   => 'required|date|after_or_equal:startDate',
+                'room' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            // Handle the validation error and return a custom response
+            return response()->json(['error' => $e->validator->errors()->first()], 422);
+        }
     
         $startDate = $request->input('startDate');
         $endDate = $request->input('endDate');
+
+
         $userRooms = explode(',', $request->input('room'));
     
         try {

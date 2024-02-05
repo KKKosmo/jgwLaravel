@@ -179,19 +179,19 @@ class MainController extends Controller
 
     public function checkForm(Request $request)
     {
-        try {
-            $request->validate([
-                'startDate' => 'required|date',
-                'endDate'   => 'required|date|after_or_equal:startDate',
-                'room' => 'required'
-            ]);
-        } catch (ValidationException $e) {
-            // Handle the validation error and return a custom response
-            return response()->json(['error' => $e->validator->errors()->first()], 422);
-        }
+        $request->validate([
+            'startDate' => 'required|date',
+            'endDate'   => 'required|date',
+            'room' => 'required'
+        ]);
     
+
         $startDate = $request->input('startDate');
         $endDate = $request->input('endDate');
+
+        if ($startDate > $endDate) {
+            return response()->json(['error' => 'Check in must be before Check out'], 422);
+        }
 
 
         $userRooms = explode(',', $request->input('room'));

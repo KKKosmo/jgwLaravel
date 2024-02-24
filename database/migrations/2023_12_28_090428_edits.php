@@ -12,7 +12,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('record_id');
             $table->timestamp('edit_timestamp');
-            $table->string('summary', 100)->nullable();
+            $table->string('type', 20)->nullable();
+            $table->string('summary', 500)->nullable();
             $table->string('user', 20);
             $table->foreign('record_id')->references('id')->on('main');
             $table->timestamps();
@@ -21,6 +22,6 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('edit');
+        Schema::dropIfExists('Edits');
     }
 };

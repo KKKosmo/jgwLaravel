@@ -11,6 +11,7 @@ class Edit extends Model
     protected $fillable = [
         'record_id',
         'edit_timestamp',
+        'type',
         'summary',
         'user',
     ];

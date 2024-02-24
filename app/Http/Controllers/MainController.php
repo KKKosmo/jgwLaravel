@@ -6,17 +6,20 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Main;
+use App\Models\Edit;
 use App\Events\MainCreated;
 use App\Events\MainUpdated;
 use App\Events\MainDeleted;
 
 class MainController extends Controller
 {
+
+
     public function index(Request $request)
     {
         $query = Main::query();
     
-        // Handle sorting
+        // Sorting
         $sortColumn = $request->query('sort');
         $sortOrder = $request->query('order', 'asc');
     
@@ -24,15 +27,61 @@ class MainController extends Controller
             $query->orderBy($sortColumn, $sortOrder);
         }
     
-        // Add the raw expression for balance
-        $query->select('*', \DB::raw('(full_payment - partial_payment) as balance'));
+        // Filter by name
+        $nameFilter = $request->query('name');
+        if ($nameFilter) {
+            $query->where('name', 'like', '%' . $nameFilter . '%');
+        }
     
-        // Retrieve data
+        // Filter by start date
+        $startDateFilter = $request->query('startDate');
+        if ($startDateFilter) {
+            $query->where('checkIn', '>=', $startDateFilter);
+        }
+    
+        // Filter by end date
+        $endDateFilter = $request->query('endDate');
+        if ($endDateFilter) {
+            $query->where('checkIn', '<=', $endDateFilter);
+        }
+        $query->select(
+            '*',
+            \DB::raw('(full_payment - partial_payment) as balance'),
+            \DB::raw("DATE_FORMAT(checkIn, '%d/%m/%Y') as checkIn"),
+            \DB::raw("DATE_FORMAT(checkOut, '%d/%m/%Y') as checkOut")
+        );
+        
+    
+        // Pagination
+        $perPage = $request->query('perPage', 10);
+        $currentPage = $request->query('page', 1);
+    
+        // Calculate total before applying filters
+        $total = $query->count();
+    
+        $query->skip(($currentPage - 1) * $perPage)->take($perPage);
+    
         $mains = $query->get();
     
-        return response()->json($mains);
+        // Calculate total pages after applying filters
+        $totalPages = ceil($total / $perPage);
+    
+        // You can customize the response to include pagination information
+        return response()->json([
+            'data' => $mains,
+            'current_page' => $currentPage,
+            'per_page' => $perPage,
+            'total' => $total,
+            'total_pages' => $totalPages,
+        ]);
     }
     
+    
+    
+    
+
+
+
 
     public function show($id)
     {
@@ -42,16 +91,31 @@ class MainController extends Controller
 
     public function store(Request $request)
     {
-
         try {
+            // Create a record in the 'main' table
             $main = Main::create($request->all());
+    
+        // Create a record in the 'edit' table with a foreign key relationship to 'main' table
+        $edit = Edit::create([
+            'record_id' => $main->id,
+            'edit_timestamp' => now(), // You may need to adjust this depending on your requirements
+            'type' => 'Create',
+            'summary' => $main,
+            'user' => $request->input('user'),
+        ]);
+
+            \Log::info($main);
+    
+
             broadcast(new MainCreated($main));
+    
             return response()->json(['message' => 'Record created successfully', 'data' => $main], 201);
         } catch (\Exception $e) {
             \Log::error($e);
             return response()->json(['response' => $e], 500);
         }
     }
+    
 
     public function update(Request $request, $id)
     {

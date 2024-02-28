@@ -8,10 +8,9 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('Edits', function (Blueprint $table) {
+        Schema::create('Events', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('record_id');
-            $table->timestamp('edit_timestamp');
             $table->string('type', 20)->nullable();
             $table->string('summary', 500)->nullable();
             $table->string('user', 20);
@@ -22,6 +21,6 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::dropIfExists('Edits');
+        Schema::dropIfExists('Events');
     }
 };

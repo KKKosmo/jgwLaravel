@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Main;
-use App\Models\Edit;
+use App\Models\Event;
 use App\Events\MainCreated;
 use App\Events\MainUpdated;
 use App\Events\MainDeleted;
@@ -96,9 +96,8 @@ class MainController extends Controller
             $main = Main::create($request->all());
     
         // Create a record in the 'edit' table with a foreign key relationship to 'main' table
-        $edit = Edit::create([
+        $event = Event::create([
             'record_id' => $main->id,
-            'edit_timestamp' => now(), // You may need to adjust this depending on your requirements
             'type' => 'Create',
             'summary' => $main,
             'user' => $request->input('user'),

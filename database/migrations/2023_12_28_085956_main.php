@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('Main', function (Blueprint $table) {
+        Schema::create('main', function (Blueprint $table) {
             $table->id();
             $table->timestamp('dateInserted');
             $table->string('name', 50);

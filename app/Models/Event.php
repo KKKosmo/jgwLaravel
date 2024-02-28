@@ -5,15 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Edit extends Model
+class Event extends Model
 {
     use HasFactory;
     protected $fillable = [
         'record_id',
-        'edit_timestamp',
         'type',
         'summary',
         'user',
     ];
-    protected $table = 'edits'; // Set the correct table name
+    protected $table = 'events'; // Set the correct table name
 }

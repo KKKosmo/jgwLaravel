@@ -14,7 +14,6 @@ use App\Events\MainDeleted;
 class MainController extends Controller
 {
 
-
     public function index(Request $request)
     {
         $query = Main::query();
@@ -44,13 +43,24 @@ class MainController extends Controller
         if ($endDateFilter) {
             $query->where('checkIn', '<=', $endDateFilter);
         }
+    
+        // Filter by rooms
+        $roomsFilter = $request->query('rooms');
+        if ($roomsFilter) {
+            $rooms = explode(',', $roomsFilter);
+            $query->whereIn('room', $rooms);
+        }
+    
         $query->select(
             '*',
             \DB::raw('(full_payment - partial_payment) as balance'),
+            \DB::raw("DATE_FORMAT(dateInserted, '%Y-%m-%d %h:%i:%s %p') as dateInserted"),
             \DB::raw("DATE_FORMAT(checkIn, '%d/%m/%Y') as checkIn"),
             \DB::raw("DATE_FORMAT(checkOut, '%d/%m/%Y') as checkOut")
         );
-        
+    
+        // Log the SQL query
+        \Log::info($query->toSql());
     
         // Pagination
         $perPage = $request->query('perPage', 10);
@@ -75,6 +85,8 @@ class MainController extends Controller
             'total_pages' => $totalPages,
         ]);
     }
+    
+    
     
     
     

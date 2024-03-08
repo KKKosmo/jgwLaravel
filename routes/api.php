@@ -15,7 +15,9 @@ use App\Http\Controllers\LoginController;
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('main/getNewSet', [MainController::class, 'getNewSet']);
+    Route::get('main/getNewSetEdit', [MainController::class, 'getNewSetEdit']);
     Route::get('main/checkForm', [MainController::class, 'checkForm']);
+    Route::get('main/checkEditForm', [MainController::class, 'checkEditForm']);
     Route::resource('events', EventController::class);
     Route::resource('main', MainController::class);
     Route::resource('reports', ReportsController::class);

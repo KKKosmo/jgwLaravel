@@ -158,18 +158,11 @@ class MainController extends Controller
     
         $startDate = $request->input('startDate');
         $endDate = $request->input('endDate');
-    
-
-        \Log::info($startDate);
-        \Log::info($endDate);
         
         if ($startDate > $endDate) {
             [$startDate, $endDate] = [$endDate, $startDate];
             \Log::info("Swapping");
         }
-
-        \Log::info($startDate);
-        \Log::info($endDate);
 
 
         $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
@@ -188,6 +181,94 @@ class MainController extends Controller
                 ->select('id', 'checkIn', 'checkOut', 'room')
                 ->where('checkIn', '<=', $lastDayOfMonth)
                 ->where('checkOut', '>=', $firstDayOfMonth)
+                ->get();
+    
+            // Process data
+            $availability = [
+                'dayNumber' => [],
+                'data'      => [],
+            ];
+    
+            // Initialize array of sets with a fixed size of 42
+            $setsSize = 42;
+            $sets = array_fill(0, $setsSize, ["J", "G", "A", "K1", "K2", "E"]);
+    
+            foreach ($mains as $main) {
+                \Log::info('Main Object: ' . json_encode($main));
+                $checkInDate = \Carbon\Carbon::parse($main->checkIn);
+                $checkOutDate = \Carbon\Carbon::parse($main->checkOut);
+    
+                // Iterate over each day in the range of the main booking
+                for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
+                    $dayIndex = ($currentDate->diffInDays($firstDayOfMonth));
+                        
+                \Log::info($dayIndex);
+                
+                if($dayIndex < 42){
+
+                    $dataArray = explode(',', $main->room);
+                    foreach ($dataArray as $room) {
+                        
+                        $roomIndex = array_search($room, $sets[$dayIndex]);
+                        if ($roomIndex !== false) {
+                            unset($sets[$dayIndex][$roomIndex]);
+                        }
+                    }
+
+
+
+                }
+                }
+            }
+    
+            // Create the availability arrays
+            foreach ($sets as $index => $rooms) {
+                $date = $firstDayOfMonth->copy()->addDays(($index + $setsSize) % $setsSize)->format('d');
+                $availability['dayNumber'][] = $date;
+                $availability['data'][] = implode(", ", $rooms);
+            }
+    
+            return response()->json($availability);
+        } catch (\Exception $e) {
+            // Handle exceptions
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    public function getNewSetEdit(Request $request)
+    {
+        $request->validate([
+            'startDate' => 'required|date',
+            'endDate'   => 'required|date',
+            'id'   => 'required',
+        ]);
+    
+        $startDate = $request->input('startDate');
+        $endDate = $request->input('endDate');
+        $id = $request->input('id');
+        
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+            \Log::info("Swapping");
+        }
+
+
+        $firstDayOfMonth = \Carbon\Carbon::parse($startDate)->firstOfMonth();
+        $lastDayOfMonth = \Carbon\Carbon::parse($endDate)->lastOfMonth();
+    
+        $dateOffset = $firstDayOfMonth->startOfMonth()->dayOfWeek;
+
+        $firstDayOfMonth->subDays($dateOffset);
+        $lastDayOfMonth->addDays(42 - ($dateOffset + $lastDayOfMonth->day));
+
+        \Log::info($firstDayOfMonth);
+        \Log::info($lastDayOfMonth);
+    
+        try {
+            $mains = \DB::table('main')
+                ->select('id', 'checkIn', 'checkOut', 'room')
+                ->where('checkIn', '<=', $lastDayOfMonth)
+                ->where('checkOut', '>=', $firstDayOfMonth)
+                ->where('id', '!=', $id)
                 ->get();
     
             // Process data
@@ -280,6 +361,50 @@ class MainController extends Controller
                 ->pluck('room')
                 ->toArray();
     
+            $commonRooms = array_intersect($userRooms, $databaseRooms);
+    
+            if (!empty($commonRooms)) {
+                return response()->json(['available' => 'false']);
+            }
+    
+            return response()->json(['available' => 'true']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function checkEditForm(Request $request)
+    {
+        $request->validate([
+            'startDate' => 'required|date',
+            'endDate'   => 'required|date',
+            'room' => 'required',
+            'id' => 'required'
+        ]);
+    
+
+        $startDate = $request->input('startDate');
+        $endDate = $request->input('endDate');
+        $id = $request->input('id');
+
+        if ($startDate > $endDate) {
+            return response()->json(['error' => 'Check in must be before Check out'], 422);
+        }
+
+
+        $userRooms = explode(',', $request->input('room'));
+    
+        try {
+            $databaseRooms = \DB::table('main')
+                ->select('room')
+                ->where('checkIn', '<=', $endDate)
+                ->where('checkOut', '>=', $startDate)
+                ->where('id', '!=', $id)
+                ->get()
+                ->pluck('room')
+                ->toArray();
+            \Log::info($databaseRooms);
+
             $commonRooms = array_intersect($userRooms, $databaseRooms);
     
             if (!empty($commonRooms)) {

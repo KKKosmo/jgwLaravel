@@ -5,6 +5,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Main;
 use App\Models\Event;
 use App\Events\MainCreated;
@@ -104,18 +105,14 @@ class MainController extends Controller
     public function store(Request $request)
     {
         try {
-            // Create a record in the 'main' table
             $main = Main::create($request->all());
-    
-        // Create a record in the 'edit' table with a foreign key relationship to 'main' table
-        $event = Event::create([
-            'record_id' => $main->id,
-            'type' => 'Create',
-            'summary' => $main,
-            'user' => $request->input('user'),
-        ]);
+            $event = Event::create([
+                'record_id' => $main->id,
+                'type' => 'Create',
+                'summary' => $main,
+                'user' => $request->input('user'),
+            ]);
 
-            \Log::info($main);
     
 
             broadcast(new MainCreated($main));
@@ -132,6 +129,13 @@ class MainController extends Controller
     {
         $main = Main::findOrFail($id);
         $main->update($request->all());
+        $event = Event::create([
+            'record_id' => $main->id,
+            'type' => 'Update',
+            'summary' => $main,
+            
+            'user' => Auth::user()->name
+        ]);
         broadcast(new MainUpdated($main));
         return response()->json(['message' => 'Record updated successfully']);
     }

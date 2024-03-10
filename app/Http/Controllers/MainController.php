@@ -144,6 +144,13 @@ class MainController extends Controller
     {
         $main = Main::findOrFail($id);
         $main->delete();
+        
+        $event = Event::create([
+            'record_id' => $main->id,
+            'type' => 'Delete',
+            'summary' => $main,
+            'user' => Auth::user()->name
+        ]);
         broadcast(new MainDeleted($id));
         return response()->json(['message' => 'Record deleted successfully']);
     }

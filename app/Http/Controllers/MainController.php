@@ -11,6 +11,8 @@ use App\Models\Event;
 use App\Events\MainCreated;
 use App\Events\MainUpdated;
 use App\Events\MainDeleted;
+use Illuminate\Support\Arr;
+
 
 class MainController extends Controller
 {
@@ -109,7 +111,20 @@ class MainController extends Controller
             $event = Event::create([
                 'record_id' => $main->id,
                 'type' => 'Create',
-                'summary' => $main,
+                
+                'summary' => 
+                "\nNAME: {$main->name}
+                \nPAX: {$main->pax}
+                \nVEHICLE: {$main->vehicle}
+                \nPETS: {$main->pets}
+                \nVIDEOKE: {$main->videoke}
+                \nPARTIAL PAYMENT: {$main->partial_payment}
+                \nFULL PAYMENT: {$main->full_payment}
+                \nPAID: {$main->paid}
+                \nCHECK IN: {$main->checkIn}
+                \nCHECK OUT: {$main->checkOut}
+                \nROOM: {$main->room}",
+
                 'user' => $request->input('user'),
             ]);
 
@@ -124,21 +139,51 @@ class MainController extends Controller
         }
     }
     
-
     public function update(Request $request, $id)
     {
         $main = Main::findOrFail($id);
+    
+        // Store the original values before the update
+        $originalValues = $main->getAttributes();
+    
+        // Update the Main model with the request data
         $main->update($request->all());
+    
+        // Get the updated values after the update
+        $updatedValues = $main->getAttributes();
+    
+        // Compare original and updated values to determine the changes
+        $ignoredColumns = ['updated_at'];
+        $changedFields = array_diff_assoc(Arr::except($updatedValues, $ignoredColumns), Arr::except($originalValues, $ignoredColumns));
+    
+        // Create a summary of the changed fields
+        $summary = '';
+        
+        foreach ($changedFields as $key => $value) {
+            $previousValue = $originalValues[$key];
+        
+            // Replace 0 and 1 with No and Yes
+            $previousValue = $previousValue == 0 ? 'No' : 'Yes';
+            $value = $value == 0 ? 'No' : 'Yes';
+        
+            $summary .= "\n" . strtoupper($key) . ": $previousValue → $value";
+        }
+        
+        
+    
+        // Create the Event record
         $event = Event::create([
             'record_id' => $main->id,
             'type' => 'Update',
-            'summary' => $main,
-            
-            'user' => Auth::user()->name
+            'summary' => $summary,
+            'user' => Auth::user()->name,
         ]);
+    
         broadcast(new MainUpdated($main));
+    
         return response()->json(['message' => 'Record updated successfully']);
     }
+    
 
     public function destroy($id)
     {
@@ -147,7 +192,19 @@ class MainController extends Controller
         
         $event = Event::create([
             'record_id' => $main->id,
-            'type' => 'Delete',
+                
+            'summary' => 
+            "\nNAME: {$main->name}
+            \nPAX: {$main->pax}
+            \nVEHICLE: {$main->vehicle}
+            \nPETS: {$main->pets}
+            \nVIDEOKE: {$main->videoke}
+            \nPARTIAL PAYMENT: {$main->partial_payment}
+            \nFULL PAYMENT: {$main->full_payment}
+            \nPAID: {$main->paid}
+            \nCHECK IN: {$main->checkIn}
+            \nCHECK OUT: {$main->checkOut}
+            \nROOM: {$main->room}",
             'summary' => $main,
             'user' => Auth::user()->name
         ]);

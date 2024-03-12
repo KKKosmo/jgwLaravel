@@ -37,8 +37,6 @@ class EventController extends Controller
             ];
         });
     
-        \Log::info($formattedEvents);
-    
         return response()->json(['data' => $formattedEvents], 200);
     }
 

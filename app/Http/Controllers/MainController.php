@@ -62,8 +62,6 @@ class MainController extends Controller
             \DB::raw("DATE_FORMAT(checkOut, '%d/%m/%Y') as checkOut")
         );
     
-        // Log the SQL query
-        \Log::info($query->toSql());
     
         // Pagination
         $perPage = $request->query('perPage', 10);
@@ -138,7 +136,6 @@ class MainController extends Controller
             return response()->json(['response' => $e], 500);
         }
     }
-    
     public function update(Request $request, $id)
     {
         $main = Main::findOrFail($id);
@@ -146,30 +143,43 @@ class MainController extends Controller
         // Store the original values before the update
         $originalValues = $main->getAttributes();
     
-        // Update the Main model with the request data
-        $main->update($request->all());
+    
+        // Change $request true to 1, and false to 0
+        $requestData = $request->all();
+        foreach ($requestData as $key => $value) {
+            if (is_bool($value)) {
+                $requestData[$key] = $value ? 1 : 0;
+            }
+        }
+    
+        // Update the Main model with the modified request data
+        $main->update($requestData);
     
         // Get the updated values after the update
         $updatedValues = $main->getAttributes();
     
         // Compare original and updated values to determine the changes
-        $ignoredColumns = ['updated_at'];
+        $ignoredColumns = ['updated_at', 'created_at'];
         $changedFields = array_diff_assoc(Arr::except($updatedValues, $ignoredColumns), Arr::except($originalValues, $ignoredColumns));
+    
+        // If there are no changes, return the response message
+        if (empty($changedFields)) {
+            return response()->json(['message' => 'No changes made']);
+        }
     
         // Create a summary of the changed fields
         $summary = '';
-        
+    
         foreach ($changedFields as $key => $value) {
             $previousValue = $originalValues[$key];
-        
-            // Replace 0 and 1 with No and Yes
-            $previousValue = $previousValue == 0 ? 'No' : 'Yes';
-            $value = $value == 0 ? 'No' : 'Yes';
-        
+    
+            if($key == 'pets' || $key == 'videoke'){
+                $previousValue = $previousValue == 0 ? 'No' : 'Yes';
+                $value = $value == 0 ? 'No' : 'Yes';
+            }
+    
             $summary .= "\n" . strtoupper($key) . ": $previousValue → $value";
         }
-        
-        
     
         // Create the Event record
         $event = Event::create([
@@ -181,8 +191,11 @@ class MainController extends Controller
     
         broadcast(new MainUpdated($main));
     
-        return response()->json(['message' => 'Record updated successfully']);
+        // Include the summary in the JSON response
+        return response()->json(['message' => 'Record updated successfully', 'summary' => $summary]);
     }
+    
+    
     
 
     public function destroy($id)
@@ -229,7 +242,6 @@ class MainController extends Controller
         
         if ($startDate > $endDate) {
             [$startDate, $endDate] = [$endDate, $startDate];
-            \Log::info("Swapping");
         }
 
 
@@ -241,9 +253,6 @@ class MainController extends Controller
         $firstDayOfMonth->subDays($dateOffset);
         $lastDayOfMonth->addDays(42 - ($dateOffset + $lastDayOfMonth->day));
 
-        \Log::info($firstDayOfMonth);
-        \Log::info($lastDayOfMonth);
-    
         try {
             $mains = \DB::table('main')
                 ->select('id', 'checkIn', 'checkOut', 'room')
@@ -262,7 +271,6 @@ class MainController extends Controller
             $sets = array_fill(0, $setsSize, ["J", "G", "A", "K1", "K2", "E"]);
     
             foreach ($mains as $main) {
-                \Log::info('Main Object: ' . json_encode($main));
                 $checkInDate = \Carbon\Carbon::parse($main->checkIn);
                 $checkOutDate = \Carbon\Carbon::parse($main->checkOut);
     
@@ -270,7 +278,6 @@ class MainController extends Controller
                 for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
                     $dayIndex = ($currentDate->diffInDays($firstDayOfMonth));
                         
-                \Log::info($dayIndex);
                 
                 if($dayIndex < 42){
 
@@ -316,7 +323,6 @@ class MainController extends Controller
         
         if ($startDate > $endDate) {
             [$startDate, $endDate] = [$endDate, $startDate];
-            \Log::info("Swapping");
         }
 
 
@@ -328,8 +334,6 @@ class MainController extends Controller
         $firstDayOfMonth->subDays($dateOffset);
         $lastDayOfMonth->addDays(42 - ($dateOffset + $lastDayOfMonth->day));
 
-        \Log::info($firstDayOfMonth);
-        \Log::info($lastDayOfMonth);
     
         try {
             $mains = \DB::table('main')
@@ -350,7 +354,6 @@ class MainController extends Controller
             $sets = array_fill(0, $setsSize, ["J", "G", "A", "K1", "K2", "E"]);
     
             foreach ($mains as $main) {
-                \Log::info('Main Object: ' . json_encode($main));
                 $checkInDate = \Carbon\Carbon::parse($main->checkIn);
                 $checkOutDate = \Carbon\Carbon::parse($main->checkOut);
     
@@ -358,7 +361,6 @@ class MainController extends Controller
                 for ($currentDate = $checkInDate; $currentDate->lte($checkOutDate); $currentDate->addDay()) {
                     $dayIndex = ($currentDate->diffInDays($firstDayOfMonth));
                         
-                \Log::info($dayIndex);
                 
                 if($dayIndex < 42){
 
@@ -471,7 +473,6 @@ class MainController extends Controller
                 ->get()
                 ->pluck('room')
                 ->toArray();
-            \Log::info($databaseRooms);
 
             $commonRooms = array_intersect($userRooms, $databaseRooms);
     

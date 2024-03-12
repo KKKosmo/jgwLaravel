@@ -10,28 +10,37 @@ use Carbon\Carbon;
 class EventController extends Controller
 {
 
-    public function index()
-{
-    $events = Event::all();
-
-    // Format timestamps to 12-hour format
-    $formattedEvents = $events->map(function ($event) {
-        return [
-            'id' => $event->id,
-            'record_id' => $event->record_id,
-            'type' => $event->type,
-            'summary' => $event->summary,
-            'user' => $event->user,
-            'created_at' => Carbon::parse($event->created_at)->format('Y-m-d h:i:s A'),
-            'updated_at' => Carbon::parse($event->updated_at)->format('Y-m-d h:i:s A'),
-            // Add other attributes as needed
-        ];
-    });
-
-    \Log::info($formattedEvents);
-
-    return response()->json(['data' => $formattedEvents], 200);
-}
+    public function index(Request $request)
+    {
+        // Get sorting parameters from the request
+        $sortColumn = $request->input('sort', 'id'); // default to 'id' if not provided
+        $sortOrder = $request->input('order', 'desc'); // default to 'desc' if not provided
+    
+        // Validate sort order to prevent SQL injection
+        $validSortOrders = ['asc', 'desc'];
+        $sortOrder = in_array(strtolower($sortOrder), $validSortOrders) ? strtolower($sortOrder) : 'desc';
+    
+        // Fetch events and apply sorting
+        $events = Event::orderBy($sortColumn, $sortOrder)->get();
+    
+        // Format timestamps to 12-hour format
+        $formattedEvents = $events->map(function ($event) {
+            return [
+                'id' => $event->id,
+                'record_id' => $event->record_id,
+                'type' => $event->type,
+                'summary' => $event->summary,
+                'user' => $event->user,
+                'created_at' => Carbon::parse($event->created_at)->format('Y-m-d h:i:s A'),
+                'updated_at' => Carbon::parse($event->updated_at)->format('Y-m-d h:i:s A'),
+                // Add other attributes as needed
+            ];
+        });
+    
+        \Log::info($formattedEvents);
+    
+        return response()->json(['data' => $formattedEvents], 200);
+    }
 
     public function show($id)
     {

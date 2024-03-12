@@ -9,7 +9,6 @@ use Carbon\Carbon;
 
 class EventController extends Controller
 {
-
     public function index(Request $request)
     {
         // Get sorting parameters from the request
@@ -20,8 +19,18 @@ class EventController extends Controller
         $validSortOrders = ['asc', 'desc'];
         $sortOrder = in_array(strtolower($sortOrder), $validSortOrders) ? strtolower($sortOrder) : 'desc';
     
-        // Fetch events and apply sorting
-        $events = Event::orderBy($sortColumn, $sortOrder)->get();
+        // Get pagination parameters from the request
+        $page = $request->input('page', 1); // default to page 1 if not provided
+        $perPage = $request->input('perPage', 10); // default to 10 items per page if not provided
+    
+        // Fetch events with pagination and apply sorting
+        $events = Event::orderBy($sortColumn, $sortOrder)
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get();
+    
+        // Get the total number of events for pagination information
+        $totalEvents = Event::count();
     
         // Format timestamps to 12-hour format
         $formattedEvents = $events->map(function ($event) {
@@ -37,8 +46,14 @@ class EventController extends Controller
             ];
         });
     
-        return response()->json(['data' => $formattedEvents], 200);
+        return response()->json([
+            'data' => $formattedEvents,
+            'total' => $totalEvents,
+            'perPage' => $perPage,
+            'currentPage' => $page,
+        ], 200);
     }
+    
 
     public function show($id)
     {

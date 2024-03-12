@@ -5,17 +5,33 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
+use Carbon\Carbon;
 
 class EventController extends Controller
 {
 
-    
     public function index()
-    {
-        $events = Event::all();
+{
+    $events = Event::all();
 
-        return response()->json(['data' => $events], 200);
-    }
+    // Format timestamps to 12-hour format
+    $formattedEvents = $events->map(function ($event) {
+        return [
+            'id' => $event->id,
+            'record_id' => $event->record_id,
+            'type' => $event->type,
+            'summary' => $event->summary,
+            'user' => $event->user,
+            'created_at' => Carbon::parse($event->created_at)->format('Y-m-d h:i:s A'),
+            'updated_at' => Carbon::parse($event->updated_at)->format('Y-m-d h:i:s A'),
+            // Add other attributes as needed
+        ];
+    });
+
+    \Log::info($formattedEvents);
+
+    return response()->json(['data' => $formattedEvents], 200);
+}
 
     public function show($id)
     {

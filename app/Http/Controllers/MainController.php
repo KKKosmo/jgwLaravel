@@ -46,13 +46,17 @@ class MainController extends Controller
         if ($endDateFilter) {
             $query->where('checkIn', '<=', $endDateFilter);
         }
-    
-        // Filter by rooms
+
         $roomsFilter = $request->query('rooms');
         if ($roomsFilter) {
             $rooms = explode(',', $roomsFilter);
-            $query->whereIn('room', $rooms);
+            $query->where(function ($q) use ($rooms) {
+                foreach ($rooms as $room) {
+                    $q->orWhere('room', 'LIKE', '%' . $room . '%');
+                }
+            });
         }
+        
     
         $query->select(
             '*',
@@ -62,7 +66,7 @@ class MainController extends Controller
             \DB::raw("DATE_FORMAT(checkOut, '%d/%m/%Y') as checkOut")
         );
     
-    
+
         // Pagination
         $perPage = $request->query('perPage', 10);
         $currentPage = $request->query('page', 1);
